@@ -36,5 +36,169 @@ class GamePanel extends JPanel implements ActionListener, KeyListener {
     private int themeIndex = 0;
     private Color fruitColor;
 
-    private final Color[] fruitColors = {Colo
-   
+    private final Color[] fruitColors = {Color.RED, Color.GREEN, Color.YELLOW, Color.CYAN, Color.MAGENTA};
+    private final Color[] bgThemes = {new Color(200, 255, 200), new Color(200, 200, 255), new Color(255, 255, 200)};
+
+    public GamePanel() {
+        setPreferredSize(new Dimension(WIDTH, HEIGHT));
+        setFocusable(true);
+        addKeyListener(this);
+        timer = new javax.swing.Timer(DELAY, this);
+    }
+
+    private void startGame() {
+        snake.clear();
+        snake.add(new Point(UNIT_SIZE * 5, UNIT_SIZE * 5)); // Starting position of snake
+        spawnFruit();
+        direction = 'R';
+        score = 0;
+        gameOver = false;
+        themeIndex = 0;
+        running = true;
+        timer.start();
+    }
+
+    private void spawnFruit() {
+        Random random = new Random();
+        fruit = new Point(random.nextInt(WIDTH / UNIT_SIZE) * UNIT_SIZE,
+                random.nextInt(HEIGHT / UNIT_SIZE) * UNIT_SIZE);
+        fruitColor = fruitColors[random.nextInt(fruitColors.length)];
+    }
+
+    public void paintComponent(Graphics g) {
+        super.paintComponent(g);
+
+        if (showStartup) {
+            drawStartupScreen(g);
+        } else if (gameOver) {
+            drawGameOver(g);
+        } else {
+            drawWorld(g);
+            drawSnake(g);
+            drawFruit(g);
+            drawScore(g);
+        }
+    }
+
+    private void drawStartupScreen(Graphics g) {
+        g.setColor(bgThemes[themeIndex % bgThemes.length]);
+        g.fillRect(0, 0, WIDTH, HEIGHT);
+        g.setColor(Color.BLACK);
+        g.setFont(new Font("Arial", Font.BOLD, 40));
+        g.drawString("Snake Game", WIDTH / 2 - 120, HEIGHT / 2 - 40);
+        g.setFont(new Font("Arial", Font.PLAIN, 20));
+        g.drawString("By : CrystalFowx", WIDTH / 2 - 80, HEIGHT / 2);
+        g.drawString("Press Enter to Start", WIDTH / 2 - 100, HEIGHT / 2 + 40);
+    }
+
+    private void drawWorld(Graphics g) {
+        g.setColor(bgThemes[themeIndex % bgThemes.length]);
+        g.fillRect(0, 0, WIDTH, HEIGHT);
+    }
+
+    private void drawSnake(Graphics g) {
+        g.setColor(Color.BLACK);
+        for (Point p : snake) {
+            g.fillRect(p.x, p.y, UNIT_SIZE, UNIT_SIZE);
+        }
+    }
+
+    private void drawFruit(Graphics g) {
+        g.setColor(fruitColor);
+        g.fillOval(fruit.x, fruit.y, UNIT_SIZE, UNIT_SIZE);
+    }
+
+    private void drawScore(Graphics g) {
+        g.setColor(Color.BLACK);
+        g.setFont(new Font("Arial", Font.PLAIN, 18));
+        g.drawString("Score: " + score, 10, 20);
+    }
+
+    private void drawGameOver(Graphics g) {
+        g.setColor(Color.BLACK);
+        g.setFont(new Font("Arial", Font.BOLD, 40));
+        g.drawString("You failed", WIDTH / 2 - 100, HEIGHT / 2 - 40);
+        g.setFont(new Font("Arial", Font.PLAIN, 20));
+        g.drawString("Score: " + score, WIDTH / 2 - 40, HEIGHT / 2);
+        g.drawString("Press Enter to Restart", WIDTH / 2 - 100, HEIGHT / 2 + 40);
+    }
+
+    @Override
+    public void actionPerformed(ActionEvent e) {
+        if (running) {
+            move();
+            checkFruit();
+            checkCollisions();
+        }
+        repaint();
+    }
+
+    private void move() {
+        Point head = new Point(snake.getFirst());
+        switch (direction) {
+            case 'U': head.y -= UNIT_SIZE; break;
+            case 'D': head.y += UNIT_SIZE; break;
+            case 'L': head.x -= UNIT_SIZE; break;
+            case 'R': head.x += UNIT_SIZE; break;
+        }
+        snake.addFirst(head);
+        if (!head.equals(fruit)) {
+            snake.removeLast(); // Remove the tail only if we did not eat fruit
+        }
+    }
+
+    private void checkFruit() {
+        if (snake.getFirst().equals(fruit)) {
+            score++;
+            spawnFruit();
+            if (score % 10 == 0) {
+                themeIndex++;
+                repaint(); // Force the background to update with new theme
+            }
+        }
+    }
+
+    private void checkCollisions() {
+        Point head = snake.getFirst();
+        if (head.x < 0 || head.x >= WIDTH || head.y < 0 || head.y >= HEIGHT) {
+            running = false;
+            gameOver = true;
+        }
+        for (int i = 1; i < snake.size(); i++) {
+            if (head.equals(snake.get(i))) {
+                running = false;
+                gameOver = true;
+            }
+        }
+        if (!running) timer.stop();
+    }
+
+    @Override
+    public void keyPressed(KeyEvent e) {
+        int key = e.getKeyCode();
+        if (showStartup && key == KeyEvent.VK_ENTER) {
+            showStartup = false;
+            startGame();
+        } else if (gameOver && key == KeyEvent.VK_ENTER) {
+            startGame();
+        } else {
+            switch (key) {
+                case KeyEvent.VK_LEFT:
+                    if (direction != 'R') direction = 'L';
+                    break;
+                case KeyEvent.VK_RIGHT:
+                    if (direction != 'L') direction = 'R';
+                    break;
+                case KeyEvent.VK_UP:
+                    if (direction != 'D') direction = 'U';
+                    break;
+                case KeyEvent.VK_DOWN:
+                    if (direction != 'U') direction = 'D';
+                    break;
+            }
+        }
+    }
+
+    @Override public void keyReleased(KeyEvent e) {}
+    @Override public void keyTyped(KeyEvent e) {}
+}
